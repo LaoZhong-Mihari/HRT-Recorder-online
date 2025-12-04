@@ -45,7 +45,7 @@ export interface SimulationResult {
 export const CorePK = {
     vdPerKG: 2.0, // L/kg
     kClear: 0.41,
-    kClearInjection: 0.041,
+    kClearInjection: 0.41, // Unified with kClear to ensure consistent AUC comparisons
     depotK1Corr: 1.0
 };
 
@@ -64,7 +64,7 @@ export function getToE2Factor(ester: Ester): number {
 
 export const TwoPartDepotPK = {
     Frac_fast: { [Ester.EB]: 0.90, [Ester.EV]: 0.40, [Ester.EC]: 0.229164549, [Ester.EN]: 0.05, [Ester.E2]: 1.0 },
-    k1_fast: { [Ester.EB]: 0.144, [Ester.EV]: 0.0216, [Ester.EC]: 0.005035046, [Ester.EN]: 0.0010, [Ester.E2]: 0 },
+    k1_fast: { [Ester.EB]: 0.144, [Ester.EV]: 0.0216, [Ester.EC]: 0.005035046, [Ester.EN]: 0.0010, [Ester.E2]: 0.5 }, // Added non-zero k1 for E2
     k1_slow: { [Ester.EB]: 0.114, [Ester.EV]: 0.0138, [Ester.EC]: 0.004510574, [Ester.EN]: 0.0050, [Ester.E2]: 0 }
 };
 
@@ -98,13 +98,15 @@ export function getBioavailabilityMultiplier(
     ester: Ester,
     extras: Partial<Record<ExtraKey, number>> = {}
 ): number {
+    const mwFactor = getToE2Factor(ester);
+    
     switch (route) {
         case Route.injection: {
             const formation = InjectionPK.formationFraction[ester] ?? 0.08;
-            return formation * getToE2Factor(ester);
+            return formation * mwFactor;
         }
         case Route.oral:
-            return OralPK.bioavailability;
+            return OralPK.bioavailability * mwFactor;
         case Route.sublingual: {
             let theta = 0.11;
             if (extras[ExtraKey.sublingualTheta] !== undefined) {
@@ -117,12 +119,12 @@ export function getBioavailabilityMultiplier(
                 const tierKey = SL_TIER_ORDER[tierIdx] || 'standard';
                 theta = SublingualTierParams[tierKey]?.theta ?? 0.11;
             }
-            return theta + (1 - theta) * OralPK.bioavailability;
+            return (theta + (1 - theta) * OralPK.bioavailability) * mwFactor;
         }
         case Route.gel:
-            return 0.05;
+            return 0.05 * mwFactor;
         case Route.patchApply:
-            return 1.0;
+            return 1.0 * mwFactor;
         case Route.patchRemove:
         default:
             return 0;
@@ -144,7 +146,9 @@ interface PKParams {
 }
 
 function resolveParams(event: DoseEvent): PKParams {
-    const k3 = event.route === Route.injection ? CorePK.kClearInjection : CorePK.kClear;
+    // Unified k3 (Clearance) for all routes to ensure consistent AUC comparison
+    const k3 = CorePK.kClear; 
+    const toE2 = getToE2Factor(event.ester);
 
     switch (event.route) {
         case Route.injection: {
@@ -154,7 +158,6 @@ function resolveParams(event: DoseEvent): PKParams {
             const fracFast = TwoPartDepotPK.Frac_fast[event.ester] || 1.0;
 
             const form = InjectionPK.formationFraction[event.ester] || 0.08;
-            const toE2 = getToE2Factor(event.ester);
             const F = form * toE2;
 
             return { Frac_fast: fracFast, k1_fast, k1_slow, k2: EsterPK.k2[event.ester] || 0, k3, F, rateMGh: 0, F_fast: F, F_slow: F };
@@ -164,17 +167,18 @@ function resolveParams(event: DoseEvent): PKParams {
                 const rateMGh = (event.extras[ExtraKey.releaseRateUGPerDay] || 0) / 24000.0;
                 return { Frac_fast: 1.0, k1_fast: 0, k1_slow: 0, k2: 0, k3, F: 1.0, rateMGh, F_fast: 1.0, F_slow: 1.0 };
             } else {
-                return { Frac_fast: 1.0, k1_fast: 0.0075, k1_slow: 0, k2: 0, k3, F: 1.0, rateMGh: 0, F_fast: 1.0, F_slow: 1.0 };
+                return { Frac_fast: 1.0, k1_fast: 0.0075, k1_slow: 0, k2: 0, k3, F: 1.0 * toE2, rateMGh: 0, F_fast: 1.0 * toE2, F_slow: 1.0 * toE2 };
             }
         }
         case Route.gel: {
             // Simplified Gel Logic from Swift file
-            return { Frac_fast: 1.0, k1_fast: 0.022, k1_slow: 0, k2: 0, k3, F: 0.05, rateMGh: 0, F_fast: 0.05, F_slow: 0.05 };
+            return { Frac_fast: 1.0, k1_fast: 0.022, k1_slow: 0, k2: 0, k3, F: 0.05 * toE2, rateMGh: 0, F_fast: 0.05 * toE2, F_slow: 0.05 * toE2 };
         }
         case Route.oral: {
             const k1Value = event.ester === Ester.EV ? OralPK.kAbsEV : OralPK.kAbsE2;
             const k2Value = event.ester === Ester.EV ? (EsterPK.k2[Ester.EV] || 0) : 0;
-            return { Frac_fast: 1.0, k1_fast: k1Value, k1_slow: 0, k2: k2Value, k3, F: OralPK.bioavailability, rateMGh: 0, F_fast: OralPK.bioavailability, F_slow: OralPK.bioavailability };
+            const F = OralPK.bioavailability * toE2;
+            return { Frac_fast: 1.0, k1_fast: k1Value, k1_slow: 0, k2: k2Value, k3, F, rateMGh: 0, F_fast: F, F_slow: F };
         }
         case Route.sublingual: {
             let theta = 0.11;
@@ -197,10 +201,10 @@ function resolveParams(event: DoseEvent): PKParams {
                 k1_slow,
                 k2: k2Value,
                 k3,
-                F: 1.0,
+                F: 1.0 * toE2,
                 rateMGh: 0,
-                F_fast: 1.0,
-                F_slow: OralPK.bioavailability
+                F_fast: 1.0 * toE2,
+                F_slow: OralPK.bioavailability * toE2
             };
         }
         case Route.patchRemove:
