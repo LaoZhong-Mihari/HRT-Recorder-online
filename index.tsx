@@ -8,14 +8,14 @@ import {
 import {
     Plus, Trash2, Syringe, Pill, Droplet, Sticker, X, 
     Settings, ChevronDown, ChevronUp, Save, Clock, Languages, Calendar,
-    Activity, Info, ZoomIn, RotateCcw, Menu, Download, Upload, QrCode, Camera, Image as ImageIcon, Copy, Github
+    Activity, Info, ZoomIn, RotateCcw, Menu, Download, Upload, QrCode, Camera, Image as ImageIcon, Copy, Github, Lock
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import jsQR from 'jsqr';
 import {
     DoseEvent, Route, Ester, ExtraKey, SimulationResult,
     runSimulation, interpolateConcentration, getToE2Factor, EsterInfo, SublingualTierParams, CorePK, SL_TIER_ORDER,
-    getBioavailabilityMultiplier
+    getBioavailabilityMultiplier, encryptData, decryptData, GEL_SITE_ORDER, GelSiteParams
 } from './logic.ts';
 
 // --- Localization ---
@@ -76,11 +76,21 @@ const TRANSLATIONS = {
         "qr.help": "含个人数据，谨慎分享。",
         "error.nonPositive": "不能输入小于等于0的值",
         
+        "export.encrypt_ask": "是否加密导出？",
+        "export.encrypt_ask_desc": "加密后将生成随机密码，导入时必须输入该密码。",
+        "export.password_title": "文件加密密码",
+        "export.password_desc": "请妥善保存此密码，导入该文件时需要使用。",
+        "import.password_title": "输入密码",
+        "import.password_desc": "检测到加密数据，请输入密码解密。",
+        "import.decrypt_error": "解密失败，密码错误或数据损坏。",
+        "qr.encrypt_label": "加密",
+
         "btn.add": "新增给药",
         "btn.save": "保存",
         "btn.cancel": "取消",
         "btn.edit": "编辑",
         "btn.ok": "确定",
+        "btn.copy": "复制",
 
         "dialog.confirm_title": "确认",
         "dialog.alert_title": "提示",
@@ -100,6 +110,7 @@ const TRANSLATIONS = {
         "field.patch_total": "总剂量 (mg)",
         "field.sl_duration": "含服时长",
         "field.sl_custom": "自定义 θ",
+        "field.gel_site": "涂抹位置",
         
         "sl.instructions": "少吞咽，含住药液直至目标时间。",
         "sl.mode.quick": "快速 (2m)",
@@ -111,6 +122,9 @@ const TRANSLATIONS = {
         "route.oral": "口服 (Oral)",
         "route.sublingual": "舌下 (Sublingual)",
         "route.gel": "凝胶 (Gel)",
+        "gel.site.arm": "手臂 (Arm)",
+        "gel.site.thigh": "大腿 (Thigh)",
+        "gel.site.scrotal": "阴囊 (Scrotal)",
         "route.patchApply": "贴片 (Patch Apply)",
         "route.patchRemove": "贴片",
 
@@ -179,11 +193,21 @@ const TRANSLATIONS = {
         "qr.help": "Contains dosage data. Share carefully.",
         "error.nonPositive": "Value must be greater than zero.",
 
+        "export.encrypt_ask": "Encrypt Export?",
+        "export.encrypt_ask_desc": "A random password will be generated and required for import.",
+        "export.password_title": "Encryption Password",
+        "export.password_desc": "Save this password securely. It is required to import this file.",
+        "import.password_title": "Enter Password",
+        "import.password_desc": "Encrypted data detected. Enter password to decrypt.",
+        "import.decrypt_error": "Decryption failed. Wrong password or corrupted data.",
+        "qr.encrypt_label": "Encrypt",
+
         "btn.add": "Add Dose",
         "btn.save": "Save",
         "btn.cancel": "Cancel",
         "btn.edit": "Edit",
         "btn.ok": "OK",
+        "btn.copy": "Copy",
 
         "dialog.confirm_title": "Confirm",
         "dialog.alert_title": "Alert",
@@ -203,6 +227,7 @@ const TRANSLATIONS = {
         "field.patch_total": "Total Dose (mg)",
         "field.sl_duration": "Hold Duration",
         "field.sl_custom": "Custom θ",
+        "field.gel_site": "Application Site",
 
         "sl.instructions": "Minimize swallowing. Hold dissolved saliva until target time.",
         "sl.mode.quick": "2m",
@@ -214,6 +239,9 @@ const TRANSLATIONS = {
         "route.oral": "Oral",
         "route.sublingual": "Sublingual",
         "route.gel": "Gel",
+        "gel.site.arm": "Arm",
+        "gel.site.thigh": "Thigh",
+        "gel.site.scrotal": "Scrotal",
         "route.patchApply": "Patch Apply",
         "route.patchRemove": "Patch",
 
@@ -288,11 +316,21 @@ const TRANSLATIONS = {
         "qr.help": "Содержит ваши данные. Делитесь осторожно.",
         "error.nonPositive": "Значение должно быть больше нуля.",
 
+        "export.encrypt_ask": "Зашифровать экспорт?",
+        "export.encrypt_ask_desc": "Будет сгенерирован случайный пароль, необходимый для импорта.",
+        "export.password_title": "Пароль шифрования",
+        "export.password_desc": "Сохраните этот пароль. Он потребуется для импорта файла.",
+        "import.password_title": "Введите пароль",
+        "import.password_desc": "Обнаружены зашифрованные данные. Введите пароль.",
+        "import.decrypt_error": "Ошибка расшифровки. Неверный пароль или данные повреждены.",
+        "qr.encrypt_label": "Зашифровать",
+
         "btn.add": "Добавить дозу",
         "btn.save": "Сохранить",
         "btn.cancel": "Отмена",
         "btn.edit": "Редактировать",
         "btn.ok": "ОК",
+        "btn.copy": "Копировать",
 
         "dialog.confirm_title": "Подтверждение",
         "dialog.alert_title": "Внимание",
@@ -312,6 +350,7 @@ const TRANSLATIONS = {
         "field.patch_total": "Общая доза (мг)",
         "field.sl_duration": "Длительность удержания",
         "field.sl_custom": "Пользовательский θ",
+        "field.gel_site": "Место нанесения",
 
         "sl.instructions": "Меньше глотайте. Держите слюну до целевого времени.",
         "sl.mode.quick": "2м",
@@ -323,6 +362,9 @@ const TRANSLATIONS = {
         "route.oral": "Перорально",
         "route.sublingual": "Сублингвально",
         "route.gel": "Гель",
+        "gel.site.arm": "Рука (Arm)",
+        "gel.site.thigh": "Бедро (Thigh)",
+        "gel.site.scrotal": "Мошонка (Scrotal)",
         "route.patchApply": "Пластырь (Наложение)",
         "route.patchRemove": "Пластырь (Снятие)",
 
@@ -526,6 +568,104 @@ const CustomSelect = ({ value, onChange, options, label }: { value: string, onCh
     );
 };
 
+const PasswordDisplayModal = ({ isOpen, onClose, password }: { isOpen: boolean, onClose: () => void, password: string }) => {
+    const { t } = useTranslation();
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(password);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{t('export.password_title')}</h3>
+                <p className="text-sm text-gray-500 mb-6 text-center">{t('export.password_desc')}</p>
+                
+                <div className="bg-gray-100 p-4 rounded-xl mb-6 flex items-center justify-between">
+                    <span className="font-mono text-lg font-bold text-gray-800 tracking-wider">{password}</span>
+                    <button onClick={handleCopy} className="p-2 hover:bg-gray-200 rounded-lg transition text-gray-600">
+                        {copied ? <span className="text-xs font-bold text-green-600">{t('qr.copied')}</span> : <Copy size={20} />}
+                    </button>
+                </div>
+
+                <button onClick={onClose} className="w-full py-3.5 bg-pink-400 text-white font-bold rounded-xl hover:bg-pink-500 shadow-lg shadow-pink-100 transition">
+                    {t('btn.ok')}
+                </button>
+            </div>
+        </div>
+    );
+};
+
+const PasswordInputModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: () => void, onConfirm: (pw: string) => void }) => {
+    const { t } = useTranslation();
+    const [password, setPassword] = useState("");
+
+    useEffect(() => {
+        if (isOpen) setPassword("");
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{t('import.password_title')}</h3>
+                <p className="text-sm text-gray-500 mb-6 text-center">{t('import.password_desc')}</p>
+                
+                <input
+                    type="text"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none font-mono text-center text-lg mb-6"
+                    placeholder="..."
+                    autoFocus
+                />
+
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3.5 text-gray-600 font-bold bg-gray-100 rounded-xl hover:bg-gray-200 transition">{t('btn.cancel')}</button>
+                    <button 
+                        onClick={() => onConfirm(password)} 
+                        disabled={!password}
+                        className="flex-1 py-3.5 bg-pink-400 text-white font-bold rounded-xl hover:bg-pink-500 shadow-lg shadow-pink-100 transition disabled:opacity-50"
+                    >
+                        {t('btn.ok')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ExportModal = ({ isOpen, onClose, onExport }: { isOpen: boolean, onClose: () => void, onExport: (encrypt: boolean) => void }) => {
+    const { t } = useTranslation();
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 transform transition-all scale-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">{t('drawer.save')}</h3>
+                <div className="space-y-3">
+                    <button onClick={() => onExport(false)} className="w-full py-4 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                        <Download size={20} />
+                        JSON
+                    </button>
+                    <button onClick={() => onExport(true)} className="w-full py-4 bg-pink-400 text-white font-bold rounded-xl hover:bg-pink-500 shadow-lg shadow-pink-100 transition flex items-center justify-center gap-2">
+                        <Lock size={20} />
+                        JSON (Encrypted)
+                    </button>
+                </div>
+                <button onClick={onClose} className="mt-6 w-full py-2 text-gray-400 font-bold hover:text-gray-600 transition">
+                    {t('btn.cancel')}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
     const { t } = useTranslation();
     const { showDialog } = useDialog();
@@ -595,6 +735,8 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
     const [patchMode, setPatchMode] = useState<"dose" | "rate">("dose");
     const [patchRate, setPatchRate] = useState("");
 
+    const [gelSite, setGelSite] = useState(0); // Index in GEL_SITE_ORDER
+
     const [slTier, setSlTier] = useState(2);
     const [useCustomTheta, setUseCustomTheta] = useState(false);
     const [customTheta, setCustomTheta] = useState("");
@@ -613,8 +755,11 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
 
     const bioMultiplier = useMemo(() => {
         const extrasForCalc = slExtras ?? {};
+        if (route === Route.gel) {
+            extrasForCalc[ExtraKey.gelSite] = gelSite;
+        }
         return getBioavailabilityMultiplier(route, ester, extrasForCalc);
-    }, [route, ester, slExtras]);
+    }, [route, ester, slExtras, gelSite]);
 
     useEffect(() => {
         if (isOpen) {
@@ -662,6 +807,12 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                     setCustomTheta("");
                 }
 
+                if (eventToEdit.route === Route.gel) {
+                    setGelSite(eventToEdit.extras[ExtraKey.gelSite] ?? 0);
+                } else {
+                    setGelSite(0);
+                }
+
             } else {
                 const now = new Date();
                 const iso = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -673,6 +824,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                 setPatchMode("dose");
                 setPatchRate("");
                 setSlTier(2);
+                setGelSite(0);
                 setUseCustomTheta(false);
                 setCustomTheta("");
                 setLastEditedField('bio');
@@ -761,6 +913,10 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
 
         if (route === Route.sublingual && slExtras) {
             Object.assign(extras, slExtras);
+        }
+
+        if (route === Route.gel) {
+            extras[ExtraKey.gelSite] = gelSite;
         }
 
         const newEvent: DoseEvent = {
@@ -861,6 +1017,21 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                 />
                             )}
 
+                            {/* Gel Site Selector */}
+                            {route === Route.gel && (
+                                <div className="mb-4">
+                                    <CustomSelect
+                                        label={t('field.gel_site')}
+                                        value={gelSite.toString()}
+                                        onChange={(val) => setGelSite(parseInt(val))}
+                                        options={GEL_SITE_ORDER.map((site, idx) => ({
+                                            value: idx.toString(),
+                                            label: t(`gel.site.${site}`)
+                                        }))}
+                                    />
+                                </div>
+                            )}
+
                             {/* Patch Mode */}
                             {route === Route.patchApply && (
                                 <div className="p-1 bg-gray-100 rounded-xl flex">
@@ -882,7 +1053,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                             {/* Dose Inputs */}
                             {(route !== Route.patchApply || patchMode === "dose") && (
                                 <div className="grid grid-cols-2 gap-4">
-                                    {ester !== Ester.E2 && (
+                                    {(ester !== Ester.E2 || route === Route.gel || route === Route.oral || route === Route.sublingual) && (
                                         <div className="space-y-2">
                                             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('field.dose_raw')}</label>
                                             <input 
@@ -893,7 +1064,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                             />
                                         </div>
                                     )}
-                                    <div className={`space-y-2 ${ester === Ester.E2 ? "col-span-2" : ""}`}>
+                                    <div className={`space-y-2 ${(ester === Ester.E2 && route !== Route.gel && route !== Route.oral && route !== Route.sublingual) ? "col-span-2" : ""}`}>
                                         <label className="block text-xs font-bold text-pink-400 uppercase tracking-wider">
                                             {t('field.dose_e2')}
                                         </label>
@@ -1069,7 +1240,36 @@ const ImportModal = ({ isOpen, onClose, onImportJson }: { isOpen: boolean; onClo
 
 const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen: boolean; onClose: () => void; events: DoseEvent[]; weight: number; onImportJson: (payload: string) => boolean; }) => {
     const { t } = useTranslation();
-    const dataString = useMemo(() => events.length ? JSON.stringify({ weight, events }) : '', [events, weight]);
+    const [isEncrypted, setIsEncrypted] = useState(false);
+    const [displayData, setDisplayData] = useState("");
+    const [password, setPassword] = useState("");
+    
+    const rawDataString = useMemo(() => events.length ? JSON.stringify({ weight, events }) : '', [events, weight]);
+
+    useEffect(() => {
+        let active = true;
+        const update = async () => {
+            if (!isOpen || !rawDataString) {
+                if (active) setDisplayData("");
+                return;
+            }
+            if (isEncrypted) {
+                const { data, password: pw } = await encryptData(rawDataString);
+                if (active) {
+                    setDisplayData(data);
+                    setPassword(pw);
+                }
+            } else {
+                if (active) {
+                    setDisplayData(rawDataString);
+                    setPassword("");
+                }
+            }
+        };
+        update();
+        return () => { active = false; };
+    }, [isOpen, isEncrypted, rawDataString]);
+
     const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1077,6 +1277,7 @@ const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen
     useEffect(() => {
         if (!isOpen) {
             setErrorMsg('');
+            setIsEncrypted(false);
         }
     }, [isOpen]);
 
@@ -1090,7 +1291,27 @@ const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen
             setErrorMsg('');
             onClose();
         } else {
-            setErrorMsg(t('qr.error.format'));
+            // If onImportJson returns false, it might be because it's waiting for password (handled in AppContent)
+            // But here we just want to know if it was "handled".
+            // My updated importEventsFromJson returns false if encrypted (waiting for password).
+            // So we should probably assume if it returns false, it might be valid but encrypted.
+            // But wait, if it returns false, it shows an error dialog in the original code?
+            // In my updated code:
+            // if encrypted -> returns false (but opens password modal).
+            // if error -> returns false (and shows error dialog).
+            // So here we can't distinguish easily.
+            // However, `importEventsFromJson` handles the UI for both cases.
+            // So we can just close the QR modal if we think it was successful or "in progress".
+            // But if it was an error, we want to show error in QR modal?
+            // Let's look at `importEventsFromJson` again.
+            // It shows `showDialog('alert', ...)` on error.
+            // So the user will see the alert.
+            // We can just close the QR modal? Or keep it open?
+            // If it's encrypted, the Password Modal will appear ON TOP of the QR Modal?
+            // Yes, z-index 60 vs 50.
+            // So we can keep QR modal open or close it.
+            // Closing it is cleaner.
+            onClose();
         }
     }, [onImportJson, onClose, t]);
 
@@ -1124,9 +1345,9 @@ const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen
     };
 
     const handleCopy = async () => {
-        if (!dataString) return;
+        if (!displayData) return;
         try {
-            await navigator.clipboard.writeText(dataString);
+            await navigator.clipboard.writeText(displayData);
             setCopyState('copied');
             setTimeout(() => setCopyState('idle'), 2000);
         } catch (err) {
@@ -1152,19 +1373,44 @@ const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen
 
                 <div className="grid md:grid-cols-2 gap-6 p-6">
                     <section className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-4">
-                        <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                            <QrCode size={16} className="text-pink-400" />
-                            {t('qr.export.title')}
-                        </div>
-                        {dataString ? (
-                            <div className="flex flex-col items-center gap-3">
-                                <div className="bg-white p-4 rounded-2xl shadow-sm">
-                                    <QRCodeCanvas value={dataString} size={200} includeMargin level="M" />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                                <QrCode size={16} className="text-pink-400" />
+                                {t('qr.export.title')}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs font-bold text-gray-500">{t('qr.encrypt_label')}</label>
+                                <div 
+                                    className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-colors ${isEncrypted ? 'bg-pink-400' : 'bg-gray-300'}`} 
+                                    onClick={() => setIsEncrypted(!isEncrypted)}
+                                >
+                                    <div className={`w-4 h-4 bg-white rounded-full shadow transition-transform ${isEncrypted ? 'translate-x-4' : ''}`} />
                                 </div>
+                            </div>
+                        </div>
+
+                        {displayData ? (
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="bg-white p-4 rounded-2xl shadow-sm relative">
+                                    <QRCodeCanvas value={displayData} size={200} includeMargin level="M" />
+                                    {isEncrypted && (
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                            <Lock className="text-pink-400/20 w-24 h-24" />
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {isEncrypted && password && (
+                                    <div className="w-full bg-pink-50 border border-pink-100 p-3 rounded-xl text-center">
+                                        <p className="text-xs text-pink-400 font-bold uppercase mb-1">{t('export.password_title')}</p>
+                                        <p className="font-mono font-bold text-gray-800 text-lg select-all">{password}</p>
+                                    </div>
+                                )}
+
                                 <textarea
-                                    className="w-full h-28 text-xs p-3 rounded-xl border border-gray-200 bg-white font-mono text-gray-600"
+                                    className="w-full h-20 text-xs p-3 rounded-xl border border-gray-200 bg-white font-mono text-gray-600"
                                     readOnly
-                                    value={dataString}
+                                    value={displayData}
                                 />
                                 <button
                                     onClick={handleCopy}
@@ -1172,7 +1418,6 @@ const QRCodeModal = ({ isOpen, onClose, events, weight, onImportJson }: { isOpen
                                 >
                                     <Copy size={16} /> {copyState === 'copied' ? t('qr.copied') : t('qr.copy')}
                                 </button>
-                                <p className="text-xs text-gray-500 text-center">{t('qr.copy_hint')}</p>
                             </div>
                         ) : (
                             <p className="text-sm text-gray-500">{t('qr.export.empty')}</p>
@@ -1543,6 +1788,11 @@ const AppContent = () => {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isQrModalOpen, setIsQrModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [generatedPassword, setGeneratedPassword] = useState("");
+    const [isPasswordDisplayOpen, setIsPasswordDisplayOpen] = useState(false);
+    const [isPasswordInputOpen, setIsPasswordInputOpen] = useState(false);
+    const [pendingImportText, setPendingImportText] = useState<string | null>(null);
 
     useEffect(() => { localStorage.setItem('hrt-events', JSON.stringify(events)); }, [events]);
     useEffect(() => { localStorage.setItem('hrt-weight', weight.toString()); }, [weight]);
@@ -1602,9 +1852,8 @@ const AppContent = () => {
             .filter((item): item is DoseEvent => item !== null);
     };
 
-    const importEventsFromJson = (text: string): boolean => {
+    const processImportedData = (parsed: any): boolean => {
         try {
-            const parsed = JSON.parse(text);
             let newEvents: DoseEvent[] = [];
             let newWeight: number | undefined = undefined;
 
@@ -1626,6 +1875,24 @@ const AppContent = () => {
 
             showDialog('alert', t('drawer.import_success'));
             return true;
+        } catch (err) {
+             console.error(err);
+             showDialog('alert', t('drawer.import_error'));
+             return false;
+        }
+    };
+
+    const importEventsFromJson = (text: string): boolean => {
+        try {
+            const parsed = JSON.parse(text);
+            
+            if (parsed.encrypted && parsed.iv && parsed.salt && parsed.data) {
+                setPendingImportText(text);
+                setIsPasswordInputOpen(true);
+                return true; 
+            }
+
+            return processImportedData(parsed);
         } catch (err) {
             console.error(err);
             showDialog('alert', t('drawer.import_error'));
@@ -1671,20 +1938,53 @@ const AppContent = () => {
             showDialog('alert', t('drawer.empty_export'));
             return;
         }
+        setIsExportModalOpen(true);
+    };
+
+    const downloadFile = (data: string, filename: string) => {
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleExportConfirm = async (encrypt: boolean) => {
+        setIsExportModalOpen(false);
         const exportData = {
             meta: { version: 1, exportedAt: new Date().toISOString() },
             weight: weight,
             events: events
         };
-        const data = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const timestamp = new Date().toISOString().split('T')[0];
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `hrt-dosages-${timestamp}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
+        const json = JSON.stringify(exportData, null, 2);
+        
+        if (encrypt) {
+            const { data, password } = await encryptData(json);
+            setGeneratedPassword(password);
+            setIsPasswordDisplayOpen(true);
+            downloadFile(data, `hrt-dosages-encrypted-${new Date().toISOString().split('T')[0]}.json`);
+        } else {
+            downloadFile(json, `hrt-dosages-${new Date().toISOString().split('T')[0]}.json`);
+        }
+    };
+
+    const handlePasswordSubmit = async (password: string) => {
+        if (!pendingImportText) return;
+        const decrypted = await decryptData(pendingImportText, password);
+        if (decrypted) {
+            setIsPasswordInputOpen(false);
+            setPendingImportText(null);
+            try {
+                const parsed = JSON.parse(decrypted);
+                processImportedData(parsed);
+            } catch (e) {
+                showDialog('alert', t('import.decrypt_error'));
+            }
+        } else {
+            showDialog('alert', t('import.decrypt_error'));
+        }
     };
 
     const dimmedStyle: React.CSSProperties | undefined = isDrawerOpen ? { filter: 'grayscale(0.8)', opacity: 0.45 } : undefined;
@@ -1808,6 +2108,24 @@ const AppContent = () => {
                 </main>
             </div>
 
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExportConfirm}
+            />
+
+            <PasswordDisplayModal
+                isOpen={isPasswordDisplayOpen}
+                onClose={() => setIsPasswordDisplayOpen(false)}
+                password={generatedPassword}
+            />
+
+            <PasswordInputModal
+                isOpen={isPasswordInputOpen}
+                onClose={() => setIsPasswordInputOpen(false)}
+                onConfirm={handlePasswordSubmit}
+            />
+
             <WeightEditorModal 
                 isOpen={isWeightModalOpen} 
                 onClose={() => setIsWeightModalOpen(false)} 
@@ -1850,10 +2168,8 @@ const AppContent = () => {
                 role="dialog"
                 aria-label={t('drawer.title')}
             >
-                <div className="p-6 border-b border-gray-100 flex items-start justify-between">
-                    <div>
-                        <p className="text-xs font-semibold text-pink-400 uppercase tracking-wide">{t('drawer.title')}</p>
-                    </div>
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900">{t('drawer.title')}</h2>
                     <button
                         onClick={() => setIsDrawerOpen(false)}
                         className="p-2 rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100"

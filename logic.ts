@@ -22,8 +22,23 @@ export enum ExtraKey {
     areaCM2 = "areaCM2",
     releaseRateUGPerDay = "releaseRateUGPerDay",
     sublingualTheta = "sublingualTheta",
-    sublingualTier = "sublingualTier"
+    sublingualTier = "sublingualTier",
+    gelSite = "gelSite"
 }
+
+export enum GelSite {
+    arm = "arm",
+    thigh = "thigh",
+    scrotal = "scrotal"
+}
+
+export const GEL_SITE_ORDER = ["arm", "thigh", "scrotal"] as const;
+
+export const GelSiteParams = {
+    [GelSite.arm]: 0.05,
+    [GelSite.thigh]: 0.05,
+    [GelSite.scrotal]: 0.40
+};
 
 export interface DoseEvent {
     id: string;
@@ -121,8 +136,13 @@ export function getBioavailabilityMultiplier(
             }
             return (theta + (1 - theta) * OralPK.bioavailability) * mwFactor;
         }
-        case Route.gel:
-            return 0.05 * mwFactor;
+        case Route.gel: {
+            const siteIdx = Math.round(extras[ExtraKey.gelSite] ?? 0);
+            // @ts-ignore
+            const siteKey = GEL_SITE_ORDER[siteIdx] || GelSite.arm;
+            const bio = GelSiteParams[siteKey] ?? 0.05;
+            return bio * mwFactor;
+        }
         case Route.patchApply:
             return 1.0 * mwFactor;
         case Route.patchRemove:
@@ -172,7 +192,12 @@ function resolveParams(event: DoseEvent): PKParams {
         }
         case Route.gel: {
             // Simplified Gel Logic from Swift file
-            return { Frac_fast: 1.0, k1_fast: 0.022, k1_slow: 0, k2: 0, k3, F: 0.05 * toE2, rateMGh: 0, F_fast: 0.05 * toE2, F_slow: 0.05 * toE2 };
+            const siteIdx = Math.round(event.extras[ExtraKey.gelSite] ?? 0);
+            // @ts-ignore
+            const siteKey = GEL_SITE_ORDER[siteIdx] || GelSite.arm;
+            const bio = GelSiteParams[siteKey] ?? 0.05;
+            
+            return { Frac_fast: 1.0, k1_fast: 0.022, k1_slow: 0, k2: 0, k3, F: bio * toE2, rateMGh: 0, F_fast: bio * toE2, F_slow: bio * toE2 };
         }
         case Route.oral: {
             const k1Value = event.ester === Ester.EV ? OralPK.kAbsEV : OralPK.kAbsE2;
@@ -389,4 +414,85 @@ export function interpolateConcentration(sim: SimulationResult, hour: number): n
     if (t1 === t0) return c0;
     const ratio = (hour - t0) / (t1 - t0);
     return c0 + (c1 - c0) * ratio;
+}
+
+// --- Encryption Utils ---
+
+async function generateKey(password: string, salt: Uint8Array) {
+    const enc = new TextEncoder();
+    const keyMaterial = await window.crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+    );
+    return window.crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt as any,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+function buffToBase64(buff: Uint8Array): string {
+    const bin = Array.from(buff, (byte) => String.fromCharCode(byte)).join("");
+    return btoa(bin);
+}
+
+function base64ToBuff(b64: string): Uint8Array {
+    const bin = atob(b64);
+    return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+export async function encryptData(text: string): Promise<{ data: string, password: string }> {
+    const password = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const key = await generateKey(password, salt);
+    const enc = new TextEncoder();
+    const encrypted = await window.crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv as any },
+        key,
+        enc.encode(text)
+    );
+
+    const bundle = {
+        encrypted: true,
+        iv: buffToBase64(iv),
+        salt: buffToBase64(salt),
+        data: buffToBase64(new Uint8Array(encrypted))
+    };
+    return {
+        data: JSON.stringify(bundle),
+        password
+    };
+}
+
+export async function decryptData(jsonString: string, password: string): Promise<string | null> {
+    try {
+        const bundle = JSON.parse(jsonString);
+        if (!bundle.encrypted) return jsonString;
+
+        const salt = base64ToBuff(bundle.salt);
+        const iv = base64ToBuff(bundle.iv);
+        const data = base64ToBuff(bundle.data);
+
+        const key = await generateKey(password, salt);
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv as any },
+            key,
+            data as any
+        );
+        return new TextDecoder().decode(decrypted);
+    } catch (e) {
+        console.error(e);
+        return null;
+    }
 }
