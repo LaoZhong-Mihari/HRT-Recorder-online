@@ -8,7 +8,7 @@ import {
 import { 
     Plus, Trash2, Syringe, Pill, Droplet, Sticker, X, 
     Settings, ChevronDown, ChevronUp, Save, Clock, Languages, Calendar,
-    Activity, Info, ZoomIn, RotateCcw
+    Activity, Info, ZoomIn, RotateCcw, Menu, Download, Upload
 } from 'lucide-react';
 import {
     DoseEvent, Route, Ester, ExtraKey, SimulationResult,
@@ -32,6 +32,18 @@ const TRANSLATIONS = {
         "timeline.title": "用药记录",
         "timeline.empty": "暂无记录，请点击右下角添加",
         "timeline.delete_confirm": "确定删除这条记录吗？",
+        "drawer.title": "剂量管理工具",
+        "drawer.desc": "导出、备份、清空或导入剂量记录。",
+        "drawer.clear": "清空所有剂量",
+        "drawer.clear_confirm": "确定要删除所有剂量记录吗？此操作无法撤销。",
+        "drawer.save": "保存剂量 JSON",
+        "drawer.save_hint": "下载当前剂量记录的 JSON 备份。",
+        "drawer.import": "导入剂量 JSON",
+        "drawer.import_hint": "从 JSON 文件导入剂量记录并覆盖当前数据。",
+        "drawer.empty_export": "当前没有可保存的剂量记录。",
+        "drawer.import_error": "导入失败，请确认文件内容有效。",
+        "drawer.import_success": "导入成功，已更新剂量记录。",
+        "drawer.close": "关闭侧栏",
         
         "btn.add": "新增给药",
         "btn.save": "保存记录",
@@ -39,7 +51,7 @@ const TRANSLATIONS = {
         "btn.edit": "编辑",
 
         "modal.weight.title": "设置体重",
-        "modal.weight.desc": "体重用于计算分布容积 ($V_d \\approx 2.0 L/kg$)，直接影响血药浓度的峰值估算。",
+        "modal.weight.desc": "体重用于计算分布容积 (Vd ≈ 2.0 L/kg)，直接影响血药浓度的峰值估算。",
         "modal.dose.add_title": "新增用药",
         "modal.dose.edit_title": "编辑用药",
 
@@ -77,7 +89,7 @@ const TRANSLATIONS = {
         "app.title": "HRT Recorder",
         "status.estimate": "Current Estimate",
         "status.weight": "Weight",
-        "chart.title": "Estradiol Concentration (pg/mL)",
+        "chart.title": "E2 Concentration Graph (pg/mL)",
         "chart.tooltip.conc": "Conc.",
         "chart.tooltip.time": "Time",
         "chart.now": "NOW",
@@ -85,6 +97,18 @@ const TRANSLATIONS = {
         "timeline.title": "Dose History",
         "timeline.empty": "No records yet. Tap + to add.",
         "timeline.delete_confirm": "Are you sure you want to delete this record?",
+        "drawer.title": "Dose Utilities",
+        "drawer.desc": "Export, backup, clear, or import your dosage history.",
+        "drawer.clear": "Clear All Dosages",
+        "drawer.clear_confirm": "Clear every dosage entry? This cannot be undone.",
+        "drawer.save": "Save Dosages (JSON)",
+        "drawer.save_hint": "Download a JSON backup of the current list.",
+        "drawer.import": "Import Dosages (JSON)",
+        "drawer.import_hint": "Load dosages from a JSON file and replace the current list.",
+        "drawer.empty_export": "There are no dosages to export yet.",
+        "drawer.import_error": "Import failed. Please check that the file is valid.",
+        "drawer.import_success": "Imported dosages successfully.",
+        "drawer.close": "Close Panel",
 
         "btn.add": "Add Dose",
         "btn.save": "Save Record",
@@ -92,7 +116,7 @@ const TRANSLATIONS = {
         "btn.edit": "Edit",
 
         "modal.weight.title": "Body Weight",
-        "modal.weight.desc": "Weight is used to calculate volume of distribution ($V_d \\approx 2.0 L/kg$), affecting peak concentration estimates.",
+        "modal.weight.desc": "Weight is used to calculate volume of distribution (Vd ≈ 2.0 L/kg), affecting peak concentration estimates.",
         "modal.dose.add_title": "Add Dose",
         "modal.dose.edit_title": "Edit Dose",
 
@@ -167,7 +191,7 @@ const formatTime = (date: Date) => {
 
 const getRouteIcon = (route: Route) => {
     switch (route) {
-        case Route.injection: return <Syringe className="w-5 h-5 text-pink-500" />;
+        case Route.injection: return <Syringe className="w-5 h-5 text-pink-400" />;
         case Route.oral: return <Pill className="w-5 h-5 text-blue-500" />;
         case Route.sublingual: return <Pill className="w-5 h-5 text-teal-500" />;
         case Route.gel: return <Droplet className="w-5 h-5 text-cyan-500" />;
@@ -195,7 +219,7 @@ const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
                         <ChevronDown size={24} />
                     </button>
                     <div className="text-center">
-                        <div className="text-5xl font-black text-pink-500 tabular-nums">{weight.toFixed(1)}</div>
+                        <div className="text-5xl font-black text-pink-400 tabular-nums">{weight.toFixed(1)}</div>
                         <div className="text-sm font-medium text-gray-400 mt-1">kg</div>
                     </div>
                     <button onClick={() => setWeight((w: number) => Math.min(200, Number((w + 0.5).toFixed(1))))} className="p-4 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition">
@@ -210,7 +234,7 @@ const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
                 </div>
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3.5 text-gray-600 font-bold bg-gray-100 rounded-xl hover:bg-gray-200 transition">{t('btn.cancel')}</button>
-                    <button onClick={() => { onSave(weight); onClose(); }} className="flex-1 py-3.5 bg-pink-500 text-white font-bold rounded-xl hover:bg-pink-600 shadow-lg shadow-pink-200 transition">{t('btn.save')}</button>
+                    <button onClick={() => { onSave(weight); onClose(); }} className="flex-1 py-3.5 bg-pink-400 text-white font-bold rounded-xl hover:bg-pink-500 shadow-lg shadow-pink-100 transition">{t('btn.save')}</button>
                 </div>
             </div>
         </div>
@@ -315,7 +339,11 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
     }, [ester]);
 
     const handleSave = () => {
-        const timeH = new Date(dateStr).getTime() / 3600000;
+        let timeH = new Date(dateStr).getTime() / 3600000;
+        if (isNaN(timeH)) {
+            timeH = new Date().getTime() / 3600000;
+        }
+        
         let finalDose = parseFloat(e2Dose);
         if (isNaN(finalDose)) finalDose = 0;
 
@@ -369,6 +397,10 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
     const tierKey = SL_TIER_ORDER[slTier] || "standard";
     const currentTheta = SublingualTierParams[tierKey]?.theta || 0.11;
 
+    const activeTheta = useCustomTheta ? (parseFloat(customTheta) || 0) : currentTheta;
+    const doseVal = parseFloat(e2Dose) || 0;
+    const effectiveDose = doseVal * (activeTheta + (1 - activeTheta) * 0.03);
+
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto transform transition-all scale-100 flex flex-col">
@@ -390,7 +422,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                 type="datetime-local" 
                                 value={dateStr} 
                                 onChange={e => setDateStr(e.target.value)} 
-                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none font-medium text-gray-800"
+                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-transparent outline-none font-medium text-gray-800"
                             />
                             <Calendar className="absolute right-4 top-4 text-gray-400 pointer-events-none" size={20} />
                         </div>
@@ -406,7 +438,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                     onClick={() => setRoute(r)}
                                     className={`p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2
                                         ${route === r 
-                                            ? 'bg-pink-50 border-pink-500 text-pink-700 shadow-sm' 
+                                            ? 'bg-pink-50 border-pink-300 text-pink-500 shadow-sm' 
                                             : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}
                                 >
                                     {getRouteIcon(r)}
@@ -425,7 +457,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                     <select 
                                         value={ester} 
                                         onChange={e => setEster(e.target.value as Ester)} 
-                                        className="w-full p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none appearance-none"
+                                        className="w-full p-4 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none appearance-none"
                                     >
                                         {availableEsters.map(e => (
                                             <option key={e} value={e}>{t(`ester.${e}`)}</option>
@@ -461,19 +493,19 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                             <input 
                                                 type="number" inputMode="decimal"
                                                 value={rawDose} onChange={e => handleRawChange(e.target.value)} 
-                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none font-mono" 
+                                                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none font-mono" 
                                                 placeholder="0.0"
                                             />
                                         </div>
                                     )}
                                     <div className={`space-y-2 ${ester === Ester.E2 ? "col-span-2" : ""}`}>
-                                        <label className="block text-xs font-bold text-pink-500 uppercase tracking-wider">
+                                        <label className="block text-xs font-bold text-pink-400 uppercase tracking-wider">
                                             {ester === Ester.E2 ? t('field.dose_raw') : t('field.dose_e2')}
                                         </label>
                                         <input 
                                             type="number" inputMode="decimal"
                                             value={e2Dose} onChange={e => handleE2Change(e.target.value)} 
-                                            className="w-full p-4 bg-pink-50 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none font-bold text-pink-700 font-mono" 
+                                            className="w-full p-4 bg-pink-50 border border-pink-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none font-bold text-pink-500 font-mono" 
                                             placeholder="0.0"
                                         />
                                     </div>
@@ -483,7 +515,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                             {route === Route.patchApply && patchMode === "rate" && (
                                 <div className="space-y-2">
                                     <label className="block text-sm font-bold text-gray-700">{t('field.patch_rate')}</label>
-                                    <input type="number" inputMode="decimal" value={patchRate} onChange={e => setPatchRate(e.target.value)} className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-500 outline-none" placeholder="e.g. 50" />
+                                    <input type="number" inputMode="decimal" value={patchRate} onChange={e => setPatchRate(e.target.value)} className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 outline-none" placeholder="e.g. 50" />
                                 </div>
                             )}
 
@@ -515,13 +547,17 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                                                 <span>{t('sl.mode.standard')}</span>
                                                 <span>{t('sl.mode.strict')}</span>
                                             </div>
-                                            <div className="text-xs text-teal-600 bg-white/50 p-2 rounded-lg">
-                                                Absorption $\theta \approx {currentTheta}$
+                                            <div className="text-xs text-teal-600 bg-white/50 p-2 rounded-lg flex justify-between items-center">
+                                                <span>Absorption θ ≈ {currentTheta}</span>
+                                                <span className="font-bold" title="Estimated Bioavailable Dose">Eff. ≈ {effectiveDose.toFixed(3)} mg</span>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div>
+                                        <div className="space-y-2">
                                             <input type="number" step="0.01" max="1" min="0" value={customTheta} onChange={e => setCustomTheta(e.target.value)} className="w-full p-3 border border-teal-200 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="0.0 - 1.0" />
+                                            <div className="text-xs text-teal-600 bg-white/50 p-2 rounded-lg flex justify-end">
+                                                <span className="font-bold" title="Estimated Bioavailable Dose">Eff. ≈ {effectiveDose.toFixed(3)} mg</span>
+                                            </div>
                                         </div>
                                     )}
 
@@ -538,7 +574,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                 </div>
 
                 <div className="p-6 border-t border-gray-100 bg-gray-50/50 rounded-b-3xl">
-                    <button onClick={handleSave} className="w-full py-4 bg-pink-500 text-white text-lg font-bold rounded-xl hover:bg-pink-600 shadow-lg shadow-pink-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    <button onClick={handleSave} className="w-full py-4 bg-pink-400 text-white text-lg font-bold rounded-xl hover:bg-pink-500 shadow-lg shadow-pink-100 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                         <Save size={20} /> {t('btn.save')}
                     </button>
                 </div>
@@ -597,8 +633,18 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
             
             const mouseTime = min + domainWidth * ratio;
             
-            const newWidth = domainWidth * scale;
-            const newMin = mouseTime - (mouseTime - min) * scale;
+            const MIN_ZOOM = 24 * 3600 * 1000; // 24 hours
+            // Calculate max zoom based on data range
+            const dataMin = data.length > 0 ? data[0].time : 0;
+            const dataMax = data.length > 0 ? data[data.length - 1].time : 0;
+            const MAX_ZOOM = Math.max(dataMax - dataMin, MIN_ZOOM);
+
+            let newWidth = domainWidth * scale;
+            if (newWidth < MIN_ZOOM) newWidth = MIN_ZOOM;
+            if (newWidth > MAX_ZOOM) newWidth = MAX_ZOOM;
+            
+            const effectiveScale = newWidth / domainWidth;
+            const newMin = mouseTime - (mouseTime - min) * effectiveScale;
             const newMax = newMin + newWidth;
 
             setXDomain([newMin, newMax]);
@@ -607,7 +653,7 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
 
         el.addEventListener('wheel', handleWheel, { passive: false });
         return () => el.removeEventListener('wheel', handleWheel);
-    }, [xDomain]);
+    }, [xDomain, data]);
 
     // --- Touch & Drag Logic ---
     
@@ -641,18 +687,29 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
             if (lastTouchRef.current) {
                 const lastDist = lastTouchRef.current.dist;
                 const scale = lastDist / dist;
-                const [min, max] = xDomain;
-                const width = max - min;
-                
-                // Zoom centered logic could be improved here, but simple center-screen zoom is robust
-                const newWidth = width * scale;
-                const centerTime = min + width * 0.5; // Zoom center of view
-                
-                const newMin = centerTime - newWidth / 2;
-                const newMax = centerTime + newWidth / 2;
-                
-                setXDomain([newMin, newMax]);
-                setIsZoomed(true);
+                if (xDomain) {
+                    const [min, max] = xDomain;
+                    const width = max - min;
+                    
+                    // Zoom centered logic could be improved here, but simple center-screen zoom is robust
+                    const MIN_ZOOM = 24 * 3600 * 1000; // 24 hours
+                    // Calculate max zoom based on data range
+                    const dataMin = data.length > 0 ? data[0].time : 0;
+                    const dataMax = data.length > 0 ? data[data.length - 1].time : 0;
+                    const MAX_ZOOM = Math.max(dataMax - dataMin, MIN_ZOOM);
+
+                    let newWidth = width * scale;
+                    if (newWidth < MIN_ZOOM) newWidth = MIN_ZOOM;
+                    if (newWidth > MAX_ZOOM) newWidth = MAX_ZOOM;
+
+                    const centerTime = min + width * 0.5; // Zoom center of view
+                    
+                    const newMin = centerTime - newWidth / 2;
+                    const newMax = centerTime + newWidth / 2;
+                    
+                    setXDomain([newMin, newMax]);
+                    setIsZoomed(true);
+                }
             }
             lastTouchRef.current = { dist, center };
             return;
@@ -671,7 +728,7 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
             // e.preventDefault(); // Only if we want to stop browser nav gestures
             const deltaX = lastPanRef.current - clientX;
             const rect = containerRef.current?.getBoundingClientRect();
-            if (rect) {
+            if (rect && xDomain) {
                 const [min, max] = xDomain;
                 const width = max - min;
                 // Convert pixel delta to time delta
@@ -695,6 +752,25 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
         }
     };
 
+    // Compute total timeline and slider parameters for panning
+    const totalMin = data.length > 0 ? data[0].time : 0;
+    const totalMax = data.length > 0 ? data[data.length - 1].time : totalMin;
+    // Default visible width when not zoomed: 25% of full range or full range if small
+    const defaultVisibleWidth = Math.max((totalMax - totalMin) * 0.25, totalMax - totalMin);
+    const visibleWidth = xDomain ? (xDomain[1] - xDomain[0]) : Math.min(defaultVisibleWidth, totalMax - totalMin || 1);
+    const sliderMin = totalMin;
+    const sliderMax = Math.max(totalMax - visibleWidth, sliderMin);
+    const sliderValue = xDomain ? xDomain[0] : sliderMin;
+
+    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = Number(e.target.value);
+        if (isNaN(v)) return;
+        const start = Math.max(sliderMin, Math.min(v, sliderMax));
+        const end = start + visibleWidth;
+        setXDomain([start, end]);
+        setIsZoomed(true);
+    };
+
     const now = new Date().getTime();
 
     if (!sim || sim.timeH.length === 0) return (
@@ -707,7 +783,7 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
     return (
         <div className="bg-white p-6 rounded-3xl shadow-lg shadow-gray-100 border border-gray-100 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('chart.title')}</h2>
+                <h2 className="text-sm font-bold text-gray-500 tracking-wider">{t('chart.title')}</h2>
                 {isZoomed && (
                     <button 
                         onClick={resetZoom}
@@ -733,8 +809,8 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
                     <ComposedChart data={data} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                         <defs>
                             <linearGradient id="colorConc" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2}/>
-                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#f472b6" stopOpacity={0.2}/>
+                                <stop offset="95%" stopColor="#f472b6" stopOpacity={0}/>
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -760,14 +836,33 @@ const ResultChart = ({ sim }: { sim: SimulationResult | null }) => {
                             labelFormatter={(ms) => `${formatDate(new Date(ms), lang)} ${formatTime(new Date(ms))}`}
                             formatter={(value: number) => [value.toFixed(1) + " pg/mL", t('chart.tooltip.conc')]}
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', padding: '12px' }}
-                            itemStyle={{ color: '#ec4899', fontWeight: 'bold' }}
+                            itemStyle={{ color: '#f472b6', fontWeight: 'bold' }}
                             labelStyle={{ color: '#6b7280', marginBottom: '4px', fontSize: '12px' }}
                         />
-                        <ReferenceLine x={now} stroke="#ef4444" strokeDasharray="3 3" label={{ value: t('chart.now'), fill: '#ef4444', fontSize: 10, position: 'insideTopLeft' }} />
-                        <Area type="monotone" dataKey="conc" stroke="#ec4899" strokeWidth={3} fillOpacity={1} fill="url(#colorConc)" activeDot={{ r: 6, strokeWidth: 0 }} />
+                        <ReferenceLine x={now} stroke="#f9a8d4" strokeDasharray="3 3" label={{ value: t('chart.now'), fill: '#f9a8d4', fontSize: 10, position: 'insideTopLeft' }} />
+                        <Area type="monotone" dataKey="conc" stroke="#f472b6" strokeWidth={3} fillOpacity={1} fill="url(#colorConc)" activeDot={{ r: 6, strokeWidth: 0 }} />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
+
+            {/* Timeline slider for quick panning */}
+            {data.length > 1 && (
+                <div className="px-2 mt-3">
+                    <input
+                        type="range"
+                        min={String(sliderMin)}
+                        max={String(sliderMax)}
+                        value={String(sliderValue)}
+                        onChange={handleSliderChange}
+                        disabled={sliderMax <= sliderMin}
+                        className="w-full accent-pink-400"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                        <span>{formatDate(new Date(sliderValue), lang)}</span>
+                        <span>{formatDate(new Date(sliderValue + visibleWidth), lang)}</span>
+                    </div>
+                </div>
+            )}
             
             {/* Visual hint for zoom availability (fades out) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-500">
@@ -797,6 +892,8 @@ const AppContent = () => {
     const [isWeightModalOpen, setIsWeightModalOpen] = useState(false);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<DoseEvent | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { localStorage.setItem('hrt-events', JSON.stringify(events)); }, [events]);
     useEffect(() => { localStorage.setItem('hrt-weight', weight.toString()); }, [weight]);
@@ -858,112 +955,196 @@ const AppContent = () => {
         }
     };
 
+    const handleClearAllEvents = () => {
+        if (!events.length) return;
+        if (confirm(t('drawer.clear_confirm'))) {
+            setEvents([]);
+        }
+    };
+
+    const handleSaveDosages = () => {
+        if (events.length === 0) {
+            alert(t('drawer.empty_export'));
+            return;
+        }
+        const data = JSON.stringify(events, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().split('T')[0];
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `hrt-dosages-${timestamp}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const text = reader.result as string;
+                const raw = JSON.parse(text);
+                if (!Array.isArray(raw)) throw new Error('Invalid format');
+                const sanitized: DoseEvent[] = raw
+                    .map((item: any) => {
+                        if (!item || typeof item !== 'object') return null;
+                        const { route, timeH, doseMG, ester, extras } = item;
+                        if (!Object.values(Route).includes(route)) return null;
+                        const timeNum = Number(timeH);
+                        if (!Number.isFinite(timeNum)) return null;
+                        const doseNum = Number(doseMG);
+                        const validEster = Object.values(Ester).includes(ester) ? ester : Ester.E2;
+                        const sanitizedExtras = (extras && typeof extras === 'object') ? extras : {};
+                        return {
+                            id: typeof item.id === 'string' ? item.id : uuidv4(),
+                            route,
+                            timeH: timeNum,
+                            doseMG: Number.isFinite(doseNum) ? doseNum : 0,
+                            ester: validEster,
+                            extras: sanitizedExtras
+                        } as DoseEvent;
+                    })
+                    .filter((item): item is DoseEvent => item !== null);
+
+                if (!sanitized.length) throw new Error('No valid entries');
+                setEvents(sanitized);
+                alert(t('drawer.import_success'));
+                setIsDrawerOpen(false);
+            } catch (err) {
+                console.error(err);
+                alert(t('drawer.import_error'));
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+    };
+
+    const triggerImport = () => {
+        fileInputRef.current?.click();
+    };
+
+    const dimmedStyle: React.CSSProperties | undefined = isDrawerOpen ? { filter: 'grayscale(0.8)', opacity: 0.45 } : undefined;
+
     return (
-        <div className="min-h-screen pb-32 max-w-lg mx-auto bg-gray-50 shadow-2xl overflow-hidden font-sans">
-            {/* Header */}
-            <header className="bg-white px-8 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl shadow-gray-100 z-10 sticky top-0">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('status.estimate')}</h1>
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-6xl font-black text-gray-900 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700">
-                                {currentLevel.toFixed(0)}
-                            </span>
-                            <span className="text-xl font-bold text-gray-400">pg/mL</span>
+        <div className="relative min-h-screen pb-32 max-w-lg mx-auto bg-gray-50 shadow-2xl overflow-hidden font-sans">
+            <div className="transition duration-300" style={dimmedStyle}>
+                {/* Header */}
+                <header className="bg-white px-8 pt-12 pb-8 rounded-b-[2.5rem] shadow-xl shadow-gray-100 z-10 sticky top-0">
+                    <div className="flex justify-between items-start mb-6">
+                        <div>
+                            <h1 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{t('status.estimate')}</h1>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-6xl font-black text-gray-900 tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700">
+                                    {currentLevel.toFixed(0)}
+                                </span>
+                                <span className="text-xl font-bold text-gray-400">pg/mL</span>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 items-end">
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setIsDrawerOpen(true)}
+                                    className="p-2 bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                                    aria-label={t('drawer.title')}
+                                >
+                                    <Menu size={20} />
+                                </button>
+                                <button 
+                                    onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
+                                    className="p-2 bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                                >
+                                    <Languages size={20} />
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-2 items-end">
-                        <button 
-                            onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')}
-                            className="p-2 bg-gray-50 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
-                        >
-                            <Languages size={20} />
+                    <div className="flex gap-4">
+                         <button onClick={() => setIsWeightModalOpen(true)} className="flex items-center gap-2 bg-gray-50 pl-3 pr-4 py-2 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-100 transition">
+                            <Settings size={16} className="text-gray-400" />
+                            {t('status.weight')}: {weight} kg
                         </button>
                     </div>
-                </div>
-                <div className="flex gap-4">
-                     <button onClick={() => setIsWeightModalOpen(true)} className="flex items-center gap-2 bg-gray-50 pl-3 pr-4 py-2 rounded-full text-sm font-bold text-gray-600 hover:bg-gray-100 transition">
-                        <Settings size={16} className="text-gray-400" />
-                        {t('status.weight')}: {weight} kg
-                    </button>
-                </div>
-            </header>
+                </header>
 
-            <main className="px-6 py-8 space-y-8">
-                {/* Chart */}
-                <ResultChart sim={simulation} />
+                <main className="px-6 py-8 space-y-8">
+                    {/* Chart */}
+                    <ResultChart sim={simulation} />
 
-                {/* Timeline */}
-                <div className="space-y-6">
-                    <div className="flex items-center justify-between px-2">
-                        <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
-                           <Activity size={20} className="text-pink-500" /> {t('timeline.title')}
-                        </h2>
-                    </div>
-
-                    {Object.keys(groupedEvents).length === 0 && (
-                        <div className="text-center py-12 text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200">
-                           <p>{t('timeline.empty')}</p>
+                    {/* Timeline */}
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between px-2">
+                            <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
+                               <Activity size={20} className="text-pink-400" /> {t('timeline.title')}
+                            </h2>
                         </div>
-                    )}
 
-                    {Object.entries(groupedEvents).map(([date, items]) => (
-                        <div key={date} className="relative">
-                            <div className="sticky top-0 bg-gray-50/95 backdrop-blur py-2 px-2 z-0 flex items-center gap-2 mb-2">
-                                <div className="w-2 h-2 rounded-full bg-pink-300"></div>
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{date}</span>
+                        {Object.keys(groupedEvents).length === 0 && (
+                            <div className="text-center py-12 text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200">
+                               <p>{t('timeline.empty')}</p>
                             </div>
-                            <div className="space-y-3">
-                                {(items as DoseEvent[]).map(ev => (
-                                    <div 
-                                        key={ev.id} 
-                                        onClick={() => handleEditEvent(ev)}
-                                        className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-pink-100 transition-all cursor-pointer group relative overflow-hidden"
-                                    >
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${ev.route === Route.injection ? 'bg-pink-50' : 'bg-gray-50'}`}>
-                                            {getRouteIcon(ev.route)}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <span className="font-bold text-gray-900 text-sm truncate">
-                                                    {ev.route === Route.patchRemove ? t('route.patchRemove') : t(`ester.${ev.ester}`)}
-                                                </span>
-                                                <span className="font-mono text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
-                                                    {formatTime(new Date(ev.timeH * 3600000))}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                                                 <span className="truncate">{t(`route.${ev.route}`).split('(')[0]}</span>
-                                                 {ev.route !== Route.patchRemove && <span className="text-gray-300">•</span>}
-                                                 <span className="text-gray-700">
-                                                    {ev.route === Route.patchRemove ? "" : (
-                                                        ev.extras[ExtraKey.releaseRateUGPerDay] 
-                                                        ? `${ev.extras[ExtraKey.releaseRateUGPerDay]} µg/d`
-                                                        : `${ev.doseMG.toFixed(2)} mg (E2)`
-                                                    )}
-                                                 </span>
-                                            </div>
-                                        </div>
-                                        
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} 
-                                            className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent flex items-center justify-end pr-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                        )}
+
+                        {Object.entries(groupedEvents).map(([date, items]) => (
+                            <div key={date} className="relative">
+                                <div className="sticky top-0 bg-gray-50/95 backdrop-blur py-2 px-2 z-0 flex items-center gap-2 mb-2">
+                                    <div className="w-2 h-2 rounded-full bg-pink-200"></div>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{date}</span>
+                                </div>
+                                <div className="space-y-3">
+                                    {(items as DoseEvent[]).map(ev => (
+                                        <div 
+                                            key={ev.id} 
+                                            onClick={() => handleEditEvent(ev)}
+                                            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md hover:border-pink-100 transition-all cursor-pointer group relative overflow-hidden"
                                         >
-                                            <Trash2 size={18} className="text-red-400 hover:text-red-600" />
-                                        </button>
-                                    </div>
-                                ))}
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${ev.route === Route.injection ? 'bg-pink-50' : 'bg-gray-50'}`}>
+                                                {getRouteIcon(ev.route)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className="font-bold text-gray-900 text-sm truncate">
+                                                        {ev.route === Route.patchRemove ? t('route.patchRemove') : t(`ester.${ev.ester}`)}
+                                                    </span>
+                                                    <span className="font-mono text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-md">
+                                                        {formatTime(new Date(ev.timeH * 3600000))}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                                                     <span className="truncate">{t(`route.${ev.route}`).split('(')[0]}</span>
+                                                     {ev.route !== Route.patchRemove && <span className="text-gray-300">•</span>}
+                                                     <span className="text-gray-700">
+                                                        {ev.route === Route.patchRemove ? "" : (
+                                                            ev.extras[ExtraKey.releaseRateUGPerDay] 
+                                                            ? `${ev.extras[ExtraKey.releaseRateUGPerDay]} µg/d`
+                                                            : `${ev.doseMG.toFixed(2)} mg (E2)`
+                                                        )}
+                                                     </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteEvent(ev.id); }} 
+                                                className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent flex items-center justify-end pr-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 size={18} className="text-pink-400 hover:text-pink-500" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </main>
+                        ))}
+                    </div>
+                </main>
+            </div>
 
             {/* FAB */}
             <div className="fixed bottom-8 left-0 right-0 flex justify-center pointer-events-none z-20">
                 <button 
                     onClick={handleAddEvent}
-                    className="pointer-events-auto bg-gray-900 text-white pl-6 pr-8 py-4 rounded-full shadow-2xl shadow-gray-900/40 flex items-center gap-3 hover:scale-105 transition-transform active:scale-95 group"
+                    disabled={isDrawerOpen}
+                    className={`pointer-events-auto bg-gray-900 text-white pl-6 pr-8 py-4 rounded-full shadow-2xl shadow-gray-900/40 flex items-center gap-3 transition-transform group ${isDrawerOpen ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
                 >
                     <div className="bg-white/20 p-1 rounded-full group-hover:rotate-90 transition-transform duration-300">
                         <Plus size={24} />
@@ -985,6 +1166,84 @@ const AppContent = () => {
                 eventToEdit={editingEvent}
                 onSave={handleSaveEvent}
             />
+
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={handleImportFile}
+            />
+
+            <div
+                className={`absolute inset-0 bg-black/40 transition-opacity duration-300 z-30 ${isDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+                onClick={() => setIsDrawerOpen(false)}
+            />
+
+            <aside
+                className={`absolute top-0 right-0 h-full w-80 max-w-full bg-white shadow-2xl z-40 transition-transform duration-300 flex flex-col ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                role="dialog"
+                aria-label={t('drawer.title')}
+            >
+                <div className="p-6 border-b border-gray-100 flex items-start justify-between">
+                    <div>
+                        <p className="text-xs font-semibold text-pink-400 uppercase tracking-wide">{t('drawer.title')}</p>
+                        <p className="text-sm text-gray-500 mt-1 leading-relaxed">{t('drawer.desc')}</p>
+                    </div>
+                    <button
+                        onClick={() => setIsDrawerOpen(false)}
+                        className="p-2 rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100"
+                        aria-label={t('drawer.close')}
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto space-y-4">
+                    <button
+                        onClick={handleSaveDosages}
+                        className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 hover:border-pink-200 hover:bg-pink-50 transition"
+                    >
+                        <Download className="text-pink-400" size={20} />
+                        <div className="text-left">
+                            <p className="font-bold text-gray-900 text-sm">{t('drawer.save')}</p>
+                            <p className="text-xs text-gray-500">{t('drawer.save_hint')}</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={triggerImport}
+                        className="w-full flex items-center gap-3 p-4 rounded-2xl border border-gray-200 hover:border-teal-200 hover:bg-teal-50 transition"
+                    >
+                        <Upload className="text-teal-500" size={20} />
+                        <div className="text-left">
+                            <p className="font-bold text-gray-900 text-sm">{t('drawer.import')}</p>
+                            <p className="text-xs text-gray-500">{t('drawer.import_hint')}</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={handleClearAllEvents}
+                        disabled={!events.length}
+                        className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition ${events.length ? 'border-gray-200 hover:border-red-200 hover:bg-red-50' : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'}`}
+                    >
+                        <Trash2 className="text-red-400" size={20} />
+                        <div className="text-left">
+                            <p className="font-bold text-gray-900 text-sm">{t('drawer.clear')}</p>
+                            <p className="text-xs text-gray-500">{t('drawer.clear_confirm')}</p>
+                        </div>
+                    </button>
+                </div>
+
+                <div className="p-6 border-t border-gray-100">
+                    <button
+                        onClick={() => setIsDrawerOpen(false)}
+                        className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 transition"
+                    >
+                        {t('drawer.close')}
+                    </button>
+                </div>
+            </aside>
         </div>
     );
 };
