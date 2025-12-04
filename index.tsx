@@ -1585,6 +1585,13 @@ const AppContent = () => {
                             <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
                                <Activity size={20} className="text-pink-400" /> {t('timeline.title')}
                             </h2>
+                            <button 
+                                onClick={handleAddEvent}
+                                className="bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg shadow-gray-900/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-transform"
+                            >
+                                <Plus size={16} />
+                                <span className="font-bold text-sm">{t('btn.add')}</span>
+                            </button>
                         </div>
 
                         {Object.keys(groupedEvents).length === 0 && (
@@ -1650,20 +1657,6 @@ const AppContent = () => {
                         ))}
                     </div>
                 </main>
-            </div>
-
-            {/* FAB */}
-            <div className="fixed bottom-8 left-0 right-0 flex justify-center pointer-events-none z-20">
-                <button 
-                    onClick={handleAddEvent}
-                    disabled={isDrawerOpen}
-                    className={`pointer-events-auto bg-gray-900 text-white pl-6 pr-8 py-4 rounded-full shadow-2xl shadow-gray-900/40 flex items-center gap-3 transition-transform group ${isDrawerOpen ? 'opacity-40 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-                >
-                    <div className="bg-white/20 p-1 rounded-full group-hover:rotate-90 transition-transform duration-300">
-                        <Plus size={24} />
-                    </div>
-                    <span className="font-bold text-lg">{t('btn.add')}</span>
-                </button>
             </div>
 
             <WeightEditorModal 
