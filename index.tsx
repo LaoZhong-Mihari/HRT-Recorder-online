@@ -736,11 +736,13 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                         label={t('field.route')}
                         value={route}
                         onChange={(val) => setRoute(val as Route)}
-                        options={Object.values(Route).map(r => ({
-                            value: r,
-                            label: t(`route.${r}`).split('(')[0].trim(),
-                            icon: getRouteIcon(r)
-                        }))}
+                        options={Object.values(Route)
+                            .filter(r => r !== Route.patchRemove)
+                            .map(r => ({
+                                value: r,
+                                label: t(`route.${r}`).split('(')[0].trim(),
+                                icon: getRouteIcon(r)
+                            }))}
                     />
 
                     {route !== Route.patchRemove && (
