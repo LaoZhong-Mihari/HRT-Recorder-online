@@ -744,6 +744,7 @@ const WeightEditorModal = ({ isOpen, onClose, currentWeight, onSave }: any) => {
 const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
     const { t } = useTranslation();
     const { showDialog } = useDialog();
+    const dateInputRef = useRef<HTMLInputElement>(null);
     
     // Form State
     const [dateStr, setDateStr] = useState("");
@@ -802,8 +803,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                     const bioValue = getBioDoseMG(eventToEdit).toFixed(3);
                     setE2Dose(bioValue);
                     if (eventToEdit.ester !== Ester.E2) {
-                        const factor = getToE2Factor(eventToEdit.ester);
-                        setRawDose((eventToEdit.doseMG / factor).toFixed(3));
+                        setRawDose(eventToEdit.doseMG.toFixed(3));
                         setLastEditedField('raw');
                     } else {
                         setRawDose(eventToEdit.doseMG.toFixed(3));
@@ -902,6 +902,14 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
         
         let e2Equivalent = parseFloat(e2Dose);
         if (isNaN(e2Equivalent)) e2Equivalent = 0;
+        // For EV injection/sublingual/oral, derive E2-equivalent from raw dose (hidden field) to avoid drift
+        if (ester === Ester.EV && (route === Route.injection || route === Route.sublingual || route === Route.oral)) {
+            const rawVal = parseFloat(rawDose);
+            if (Number.isFinite(rawVal)) {
+                const factor = getToE2Factor(ester) || 1;
+                e2Equivalent = rawVal * factor;
+            }
+        }
         let finalDose = 0;
 
         const extras: any = {};
@@ -928,7 +936,7 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                 return;
             }
             const factor = getToE2Factor(ester) || 1;
-            finalDose = e2Equivalent / factor; // store compound mg
+            finalDose = (ester === Ester.E2) ? e2Equivalent : e2Equivalent / factor; // store compound mg
         }
 
         if (route === Route.sublingual && slExtras) {
@@ -997,14 +1005,20 @@ const DoseFormModal = ({ isOpen, onClose, eventToEdit, onSave }: any) => {
                     {/* Time */}
                     <div className="space-y-2">
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('field.time')}</label>
-                        <div className="relative">
+                        <div className="flex items-center gap-3">
                             <input 
+                                ref={dateInputRef}
                                 type="datetime-local" 
                                 value={dateStr} 
                                 onChange={e => setDateStr(e.target.value)} 
-                                className="w-full max-w-full min-w-0 p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-300 focus:border-transparent outline-none font-medium text-gray-800 text-sm"
+                                className="text-xl font-bold text-gray-900 font-mono bg-transparent border-none p-0 focus:ring-0 focus:outline-none"
                             />
-                            <Calendar className="absolute right-3 top-3 text-gray-400 pointer-events-none" size={18} />
+                            <button 
+                                onClick={() => dateInputRef.current?.focus()}
+                                className="p-2 bg-gray-100 hover:bg-pink-100 text-gray-600 hover:text-pink-600 rounded-lg transition-colors"
+                            >
+                                <Calendar size={18} />
+                            </button>
                         </div>
                     </div>
 
@@ -1949,8 +1963,8 @@ const AppContent = () => {
                     {currentView === 'history' && (
                         <div className="space-y-6 pt-8">
                             <div className="flex items-center justify-between px-2">
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2">
-                                   <Activity size={20} className="text-pink-400" /> {t('timeline.title')}
+                                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                                   <Activity size={24} className="text-pink-400" /> {t('timeline.title')}
                                 </h2>
                                 <button 
                                     onClick={handleAddEvent}
@@ -2002,9 +2016,14 @@ const AppContent = () => {
                                                                 </>
                                                             )}
                                                         </div>
-                                                        {ev.route !== Route.patchRemove && (
-                                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-700">
-                                                                <span>{`${t('timeline.dose_label')}: ${(getRawDoseMG(ev) ?? 0).toFixed(2)} mg`}</span>
+                                                        {ev.route !== Route.patchRemove && !ev.extras[ExtraKey.releaseRateUGPerDay] && (
+                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-700">
+                                                                <span>{`${t('timeline.dose_label')}: ${ev.doseMG.toFixed(2)} mg`}</span>
+                                                                {ev.ester !== Ester.E2 && (
+                                                                    <span className="text-gray-500 text-xs">
+                                                                        {`(${ (ev.doseMG * getToE2Factor(ev.ester)).toFixed(2) } mg E2)`}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
