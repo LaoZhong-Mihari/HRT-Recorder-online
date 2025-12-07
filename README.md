@@ -97,7 +97,10 @@ If you deploy this app publicly, please:<br>
 2. **Respect the license**: Ensure you follow any licensing terms associated with the original algorithm code.<br>
    **遵守许可协议**：确保你遵循原始算法代码所适用的全部许可条款。
 
-*I wish you a smooth transition and Happy Estimating!* 🏳️‍⚧️<br>
-*祝你性转顺利，快乐估测(>^ω^<)* 
+I wish you a smooth transition and Happy Estimating! 🏳️‍⚧️<br>
+祝你性转顺利，快乐估测(>^ω^<)
 <br>
-*同时，祝所有用此 webapp 的停经期女性身体健康 ❤️*
+同时，祝所有用此 webapp 的停经期女性身体健康 ❤️
+<br>
+At the same time, I wish good health to all the women using this web app who are going through menopause. ❤️
+
