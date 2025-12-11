@@ -47,7 +47,7 @@ const AppContent = () => {
     const languageOptions = useMemo(() => ([
         { value: 'zh', label: '简体中文', icon: <span className="text-lg" role="img" aria-label="CN">🇨🇳</span> },
         { value: 'zh-TW', label: '正體中文', icon: <span className="text-lg" role="img" aria-label="TW">🤔</span> },
-        { value: 'yue', label: '粵語', icon: <span className="text-lg" role="img" aria-label="HK">🇭🇰</span> },
+        { value: 'yue', label: '廣東話', icon: <span className="text-lg" role="img" aria-label="HK">🇭🇰</span> },
         { value: 'en', label: 'English', icon: <span className="text-lg" role="img" aria-label="US">🇺🇸</span> },
         { value: 'ru', label: 'Русский', icon: <span className="text-lg" role="img" aria-label="RU">🇷🇺</span> },
         { value: 'uk', label: 'Українська', icon: <span className="text-lg" role="img" aria-label="UA">🇺🇦</span> },
